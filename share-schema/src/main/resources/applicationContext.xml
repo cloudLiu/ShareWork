@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:jdbc="http://www.springframework.org/schema/jdbc"  
+	xmlns:jee="http://www.springframework.org/schema/jee" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd
+		http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-4.0.xsd
+		http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-4.0.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd
+		http://www.springframework.org/schema/data/jpa http://www.springframework.org/schema/data/jpa/spring-jpa-1.3.xsd"
+	default-lazy-init="true">
+	
+	<!-- 
+		
+		<context:annotation-config/> 
+			显示注册
+			AutowiredAnnotationBeanPostProcessor
+			CommonAnnotationBeanPostProcessor
+			PersistenceAnnotationBeanPostProcessor
+			RequiredAnnotationBeanPostProcessor 
+			这 4 个BeanPostProcessor。
+			如果配置了<context:component-scan />就不需要添加了，因为自动注入上述processor的功能
+	 -->
+	
+	<description>Spring公共配置 </description>
+	
+	<context:property-placeholder ignore-unresolvable="true"
+			location="classpath*:/application.properties" />
+
+	<context:component-scan base-package="com.CZAomai.share.core">
+		<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+		<context:exclude-filter type="annotation" expression="org.springframework.web.bind.annotation.ControllerAdvice"/>
+	</context:component-scan>
+
+	<bean id="car" class="com.CZAomai.share.core.entity.Car">
+		<property name="name" value="hahaha"/>
+		<property name="price" value="3900000"/>
+	</bean>
+	
+	<bean id="office" class="com.CZAomai.share.core.entity.Office">
+		<property name="name" value="Enland"></property>
+	</bean>
+	
+	<bean id="boss" class="com.CZAomai.share.core.entity.Boss"></bean>
+	<!-- 数据源配置, 使用Tomcat JDBC连接池 -->
+	<bean id="dataSource" class="org.apache.tomcat.jdbc.pool.DataSource" destroy-method="close">
+	
+		<!-- Connection Info -->
+		<property name="driverClassName" value="${jdbc.driver}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+		
+		<!-- Connection Pooling Info -->
+		<property name="maxActive" value="${jdbc.pool.maxActive}" />
+		<property name="maxIdle" value="${jdbc.pool.maxIdle}" />
+		<property name="minIdle" value="0" />
+		<property name="defaultAutoCommit" value="false" />
+	</bean>
+	
+	<!--  
+	<bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+		<property name="dataSource" ref="dataSource"></property>
+		<property name="mappingResources">
+			<list>
+				<value>com/liyu/bean/Person.hbm.xml</value>
+			</list>
+		</property>
+		<property name="hibernateProperties">
+			<props>
+				hibernate.dialect=org.hibernate.dialect.MySQL5Dialect
+               	hibernate.hbm2ddl.auto=update
+               	hibernate.show_sql=false
+               	hibernate.format_sql=false
+               	hibernate.cache.use_second_level_cache=true
+                hibernate.cache.use_query_cache=false
+           		hibernate.cache.provider_class=org.hibernate.cache.EhCacheProvider
+				<prop key="hibernate.dialect">
+					org.hibernate.dialect.MySQLInnoDBDialect
+				</prop>
+				<prop key="hibernate.hbm2ddl.auto">update</prop>
+			</props>
+		</property>
+	</bean>
+	
+	<bean id="transactionManager" class="org.springframework.orm.hibernat3.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory"></property>
+	</bean>
+	-->
+	
+	<bean id="hibernateJpaVendorAdapter" class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">
+		<property name="databasePlatform">
+			<bean factory-method="getDialect" class="org.springside.modules.persistence.Hibernates">
+				<constructor-arg ref="dataSource"/>
+			</bean>
+		</property>
+	</bean>
+	
+	<bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean"> 
+		<property name="dataSource" ref="dataSource"/>
+		<property name="jpaVendorAdapter" ref="hibernateJpaVendorAdapter"/>
+		<property name="packagesToScan" value="com.CZAomai.ShareWork.entity"/>
+		<property name="jpaProperties">
+			<props>
+				<!-- 命名规则 My_NAME->MyName -->
+				<prop key="hibernate.ejb.naming_strategy">org.hibernate.cfg.ImprovedNamingStrategy</prop>
+			</props>
+		</property>
+	</bean>
+	<!--
+	针对不同资源的事务操作spring分别提供了大量的PlatfromTransactionmanager：
+		JDBC DataSource ：DataSourceTransactionManager
+		Hibernate SessionFactory：HibernateTransactionManager
+		JPA EntityManagerFactory：JpaTransactionManager
+		分布式2PC资源：JtaTrasactionManager
+	此外。。。Spring还针对Weblogic、OC4J、WebSphere提供了单独的事务管理器。
+		Weblogic：WeblogicJtaTransactionManager
+		OC4J：OC4JJtaTransactionManager
+		WebSphere：WebSphereUowTransactionManager
+	 -->
+	<!-- Jpa 事务配置 -->
+	<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory"/>
+	</bean>
+	
+	<!-- Spring Data Jpa配置
+ 	<jpa:repositories base-package="com.CZAomai.share.core.repository"  transaction-manager-ref="transactionManager" entity-manager-factory-ref="entityManagerFactory"/>
+   	-->
+	
+	<!-- TransactionProxyFactoryBean事务代理bean -->
+	<!-- 使用annotation定义事务 -->
+	<tx:annotation-driven transaction-manager="transactionManager" proxy-target-class="true" />
+	
+	
+	<!-- JSR303 Validator定义 
+ 	<bean id="validator" class="org.springframework.validation.beanvalidation.LocalValidatorFactoryBean" />
+	-->
+</beans>
